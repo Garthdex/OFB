@@ -4,9 +4,14 @@ public class Tea {
     public static byte[] generateKey() {
         byte[] k = new byte[16];
         for (int i = 0; i < 16; i++) {
-            k[i] = (byte)(Math.random()*100);
+            k[i] = (byte)(Math.random());
         }
         return k;
+    }
+
+    public static void ofb(int[] value, int[] vector) {
+        value[0] ^= vector[0];
+        value[1] ^= vector[1];
     }
 
     public static byte[] encrypt(int[] v, int[] k) {
