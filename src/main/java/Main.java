@@ -1,7 +1,9 @@
 import java.io.*;
 
 public class Main {
-    private static final String KEY_FILE  = "//key.key";
+    private static final String KEY_FILE  = "\\key.key";
+    private static final int VECTOR_ELEMENT = 0;
+    private static final int EOF = -1;
 
     private static void writeToFile(String path, byte[] buffer) {
         try (FileOutputStream fos = new FileOutputStream(path)) {
@@ -15,13 +17,12 @@ public class Main {
         fos.write(buffer, 0, size);
     }
 
-    private static int readFile(FileInputStream fis, byte[] buffer, int pos) throws IOException {
-        fis.skip(pos);
+    private static int readFile(FileInputStream fis, byte[] buffer) throws IOException {
         int size = 0;
         int tempByte;
         for (int i = 0; i < 8; i++) {
             tempByte = fis.read();
-            if (tempByte != -1) {
+            if (tempByte != EOF) {
                 buffer[i] = (byte) tempByte;
                 size++;
             } else buffer[i] = 0;
@@ -40,7 +41,6 @@ public class Main {
 
     public static void main(String[] args) throws IOException {
         File f = new File(args[1]);
-        int size;
         if (args.length == 0 || args[0].equals("?")) {
             printHelpToConsole();
             return;
@@ -52,18 +52,9 @@ public class Main {
             try (FileOutputStream writer = new FileOutputStream(f.getParent() + "//" + enc);
                  FileInputStream reader = new FileInputStream(args[1])) {
 
-                int vector[] = {0, 0};
-                byte[] bufferValue = new byte[8];
                 byte[] bufferKey = Tea.generateKey();
 
-                for (int i = 0, pos = 0; i < f.length(); i += 8) {
-                    size = readFile(reader, bufferValue, pos);
-                    int[] value = Transfer.byteToInt(bufferValue);
-                    int[] key = Transfer.byteToInt(bufferKey);
-                    Tea.encrypt(vector, key);
-                    Tea.ofb(value, vector);
-                    writeFile(writer, Transfer.intToByte(value), size);
-                }
+                runCycle(f, writer, reader, bufferKey);
 
                 writeToFile(f.getParent() + KEY_FILE, bufferKey);
             } catch (IOException e) {
@@ -78,25 +69,36 @@ public class Main {
                  FileInputStream reader = new FileInputStream(args[1]);
                  FileInputStream writerKey = new FileInputStream(f.getParent() + KEY_FILE);) {
 
-                int vector[] = {0, 0};
-                byte[] bufferValue = new byte[8];
+
                 byte[] bufferKey = new byte[16];
 
                 writerKey.read(bufferKey, 0, bufferKey.length);
 
-                for (int i = 0, pos = 0; i < f.length(); i += 8) {
-                    size = readFile(reader, bufferValue, pos);
-                    int[] value = Transfer.byteToInt(bufferValue);
-                    int[] key = Transfer.byteToInt(bufferKey);
-                    Tea.encrypt(vector, key);
-                    Tea.ofb(value, vector);
-                    writeFile(writer, Transfer.intToByte(value), size);
-                }
+                runCycle(f, writer, reader, bufferKey);
 
             } catch (IOException e) {
                 System.out.println(e.getMessage());
             }
         }
+    }
+
+    private static void runCycle(File f, FileOutputStream writer, FileInputStream reader, byte[] bufferKey) throws IOException {
+        int size;
+        int vector[] = initVector();
+        byte[] bufferValue = new byte[8];
+
+        for (int i = 0; i < f.length(); i += 8) {
+            size = readFile(reader, bufferValue);
+            int[] value = Transfer.byteToInt(bufferValue);
+            int[] key = Transfer.byteToInt(bufferKey);
+            Tea.encrypt(vector, key);
+            Tea.ofb(value, vector);
+            writeFile(writer, Transfer.intToByte(value), size);
+        }
+    }
+
+    private static int[] initVector() {
+        return new int[]{VECTOR_ELEMENT, VECTOR_ELEMENT};
     }
 
 }
