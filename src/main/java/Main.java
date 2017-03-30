@@ -17,6 +17,10 @@ public class Main {
         fos.write(buffer, 0, size);
     }
 
+    private static void writeFile(FileOutputStream fos, byte[] buffer) throws IOException {
+        fos.write(buffer, 0, buffer.length);
+    }
+
     private static int readFile(FileInputStream fis, byte[] buffer) throws IOException {
         int size = 0;
         int tempByte;
@@ -67,7 +71,7 @@ public class Main {
             String dec = f.getName().substring(0, f.getName().lastIndexOf('-')) + "-dec.txt";
             try (FileOutputStream writer = new FileOutputStream(f.getParent() + "//" + dec);
                  FileInputStream reader = new FileInputStream(args[1]);
-                 FileInputStream writerKey = new FileInputStream(f.getParent() + KEY_FILE);) {
+                 FileInputStream writerKey = new FileInputStream(f.getParent() + KEY_FILE)) {
 
 
                 byte[] bufferKey = new byte[16];
@@ -83,17 +87,22 @@ public class Main {
     }
 
     private static void runCycle(File f, FileOutputStream writer, FileInputStream reader, byte[] bufferKey) throws IOException {
-        int size;
+        int size = (int)f.length()/8;
         int vector[] = initVector();
         byte[] bufferValue = new byte[8];
 
-        for (int i = 0; i < f.length(); i += 8) {
-            size = readFile(reader, bufferValue);
+
+        for (int i = 0; i < size; i++) {
             int[] value = Transfer.byteToInt(bufferValue);
             int[] key = Transfer.byteToInt(bufferKey);
             Tea.encrypt(vector, key);
             Tea.ofb(value, vector);
-            writeFile(writer, Transfer.intToByte(value), size);
+
+            if (i == size) {
+                int sizeBlock = readFile(reader, bufferValue);
+                writeFile(writer, Transfer.intToByte(value), sizeBlock);
+            }
+            else writeFile(writer, Transfer.intToByte(value));
         }
     }
 
