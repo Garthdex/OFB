@@ -1,3 +1,6 @@
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+
 public class Transfer {
     public static byte[] intToByte(int[] data) {
         byte[] result = new byte[data.length * 4];
@@ -35,5 +38,18 @@ public class Transfer {
             }
         }
         return result;
+    }
+
+    public static int[] getMd5Digest(String string) {
+        byte[] bytes = null;
+        try {
+            MessageDigest md5 = MessageDigest.getInstance("MD5");
+            md5.update(string.getBytes());
+            bytes = md5.digest();
+
+        } catch (NoSuchAlgorithmException e) {
+            e.printStackTrace();
+        }
+        return byteToInt(bytes);
     }
 }
