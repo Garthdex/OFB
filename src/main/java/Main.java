@@ -1,38 +1,6 @@
 import java.io.*;
 
 public class Main {
-    private static final int VECTOR_ELEMENT = 0;
-    private static final int EOF = -1;
-
-    private static void writeToFile(String path, byte[] buffer) {
-        try (FileOutputStream fos = new FileOutputStream(path)) {
-            fos.write(buffer, 0, buffer.length);
-        } catch (IOException e) {
-            System.out.println(e.getMessage());
-        }
-    }
-
-    private static void writeFile(FileOutputStream fos, byte[] buffer, int size) throws IOException {
-        fos.write(buffer, 0, size);
-    }
-
-    private static void writeFile(FileOutputStream fos, byte[] buffer) throws IOException {
-        fos.write(buffer, 0, buffer.length);
-    }
-
-    private static int readFile(FileInputStream fis, byte[] buffer) throws IOException {
-        int size = 0;
-        int tempByte;
-        for (int i = 0; i < 8; i++) {
-            tempByte = fis.read();
-            if (tempByte != EOF) {
-                buffer[i] = (byte) tempByte;
-                size++;
-            } else buffer[i] = 0;
-        }
-        return size;
-    }
-
     private static void printHelpToConsole() {
         System.out.println("Вы должны ввести параметры в таком порядке:" + "\n"
                 + "java -jar tea.jar -e param1 для шифрования" + "\n"
@@ -60,9 +28,9 @@ public class Main {
                 int[] key = Transfer.byteToInt(bufferKey);
 
                 int[] keyEnc = Tea.encryptInParts(key, hashKey);
-                writeFile(writer, Transfer.intToByte(keyEnc));
+                FileManager.writeFile(writer, Transfer.intToByte(keyEnc));
 
-                runCycle(f, writer, reader, key);
+                runCycleEnc(f, writer, reader, key);
             } catch (IOException e) {
                 System.out.println(e.getMessage());
             }
@@ -80,8 +48,7 @@ public class Main {
                 int[] key = Transfer.byteToInt(bufferKey);
                 int[] keyDec = Tea.decryptInParts(key, hashKey);
 
-
-                runCycle(f, writer, reader, keyDec);
+                runCycleDec(f, writer, reader, keyDec);
 
             } catch (IOException e) {
                 System.out.println(e.getMessage());
@@ -89,29 +56,45 @@ public class Main {
         }
     }
 
-    private static void runCycle(File f, FileOutputStream writer, FileInputStream reader,
+    private static void runCycleEnc(File f, FileOutputStream writer, FileInputStream reader,
                                  int[] key) throws IOException {
         int size = (int)f.length()/8;
-        int vector[] = initVector();
+        int vector[] = Tea.initVector();
         byte[] bufferValue = new byte[8];
-
+        int[] value;
 
         for (int i = 0; i <= size; i++) {
-            reader.read(bufferValue, 0, bufferValue.length);
-            int[] value = Transfer.byteToInt(bufferValue);
+            if (i != size) reader.read(bufferValue, 0, bufferValue.length);
+            value = Transfer.byteToInt(bufferValue);
             Tea.encrypt(vector, key);
             Tea.ofb(value, vector);
-
             if (i == size) {
-                int sizeBlock = readFile(reader, bufferValue);
-                writeFile(writer, Transfer.intToByte(value), sizeBlock);
+                int sizeBlock = FileManager.readFile(reader, bufferValue);
+                value = Transfer.byteToInt(bufferValue);
+                FileManager.writeFile(writer, Transfer.intToByte(value), sizeBlock);
             }
-            else writeFile(writer, Transfer.intToByte(value));
+            else FileManager.writeFile(writer, Transfer.intToByte(value));
         }
     }
 
-    private static int[] initVector() {
-        return new int[]{VECTOR_ELEMENT, VECTOR_ELEMENT};
-    }
+    private static void runCycleDec(File f, FileOutputStream writer, FileInputStream reader,
+                                    int[] key) throws IOException {
+        int size = (int)f.length()/8;
+        int vector[] = Tea.initVector();
+        byte[] bufferValue = new byte[8];
+        int[] value;
 
+        for (int i = 2; i <= size; i++) {
+            if (i != size) reader.read(bufferValue, 0, bufferValue.length);
+            value = Transfer.byteToInt(bufferValue);
+            Tea.encrypt(vector, key);
+            Tea.ofb(value, vector);
+            if (i == size) {
+                int sizeBlock = FileManager.readFile(reader, bufferValue);
+                value = Transfer.byteToInt(bufferValue);
+                FileManager.writeFile(writer, Transfer.intToByte(value), sizeBlock);
+            }
+            else FileManager.writeFile(writer, Transfer.intToByte(value));
+        }
+    }
 }

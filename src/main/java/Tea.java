@@ -1,9 +1,10 @@
 import java.util.Random;
 
-public class Tea {
+class Tea {
     private static final int DELTA = 0x9e3779b9;
+    private static final int VECTOR_ELEMENT = 0;
 
-    public static byte[] generateKey() {
+    static byte[] generateKey() {
         byte[] k = new byte[16];
         Random random = new Random();
         for (int i = 0; i < 16; i++) {
@@ -12,12 +13,12 @@ public class Tea {
         return k;
     }
 
-    public static void ofb(int[] value, int[] vector) {
+    static void ofb(int[] value, int[] vector) {
         value[0] ^= vector[0];
         value[1] ^= vector[1];
     }
 
-    public static int[] encrypt(int[] v, int[] k) {
+    static int[] encrypt(int[] v, int[] k) {
         int v0 = v[0];
         int v1 = v[1];
         int sum = 0;
@@ -38,7 +39,7 @@ public class Tea {
         return v;
     }
 
-    public static int[] encryptInParts(int[] key, int[] hashKey) {
+    static int[] encryptInParts(int[] key, int[] hashKey) {
         int[] part1 = {key[0], key[1]};
         int[] part2 = {key[2], key[3]};
 
@@ -46,11 +47,10 @@ public class Tea {
         encrypt(part2, hashKey);
 
 
-        int[] result = {part1[0], part1[1], part2[0], part2[1]};
-        return result;
+        return new int[]{part1[0], part1[1], part2[0], part2[1]};
     }
 
-    public static int[] decryptInParts(int[] key, int[] hashKey) {
+    static int[] decryptInParts(int[] key, int[] hashKey) {
         int[] part1 = {key[0], key[1]};
         int[] part2 = {key[2], key[3]};
 
@@ -58,11 +58,17 @@ public class Tea {
         decrypt(part2, hashKey);
 
 
-        int[] result = {part1[0], part1[1], part2[0], part2[1]};
-        return result;
+        return new int[]{part1[0], part1[1], part2[0], part2[1]};
     }
 
-    public static int[] decrypt (int[]  v, int[] k) {
+    /**
+     *
+     * @param v значение
+     * @param k ключ
+     * @return
+     * Декрипт для шифрования, здесь не используется
+     */
+    static int[] decrypt (int[]  v, int[] k) {
         int v0 = v[0];
         int v1 = v[1];
         int sum = 0xC6EF3720;
@@ -82,6 +88,10 @@ public class Tea {
         v[0] = v0;
         v[1] = v1;
         return v;
+    }
+
+    static int[] initVector() {
+        return new int[]{VECTOR_ELEMENT, VECTOR_ELEMENT};
     }
 
 }
