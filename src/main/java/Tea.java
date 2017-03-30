@@ -50,7 +50,19 @@ public class Tea {
         return result;
     }
 
-    public static byte[] decrypt (int[]  v, int[] k) {
+    public static int[] decryptInParts(int[] key, int[] hashKey) {
+        int[] part1 = {key[0], key[1]};
+        int[] part2 = {key[2], key[3]};
+
+        decrypt(part1, hashKey);
+        decrypt(part2, hashKey);
+
+
+        int[] result = {part1[0], part1[1], part2[0], part2[1]};
+        return result;
+    }
+
+    public static int[] decrypt (int[]  v, int[] k) {
         int v0 = v[0];
         int v1 = v[1];
         int sum = 0xC6EF3720;
@@ -69,7 +81,7 @@ public class Tea {
 
         v[0] = v0;
         v[1] = v1;
-        return Transfer.intToByte(v);
+        return v;
     }
 
 }

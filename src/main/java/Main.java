@@ -1,7 +1,6 @@
 import java.io.*;
 
 public class Main {
-    private static final String KEY_FILE  = "\\key.key";
     private static final int VECTOR_ELEMENT = 0;
     private static final int EOF = -1;
 
@@ -45,6 +44,8 @@ public class Main {
 
     public static void main(String[] args) throws IOException {
         File f = new File(args[1]);
+        String password = args[2];
+        int[] hashKey = Transfer.getMd5Digest(password);
         if (args.length == 0 || args[0].equals("?")) {
             printHelpToConsole();
             return;
@@ -55,12 +56,13 @@ public class Main {
             String enc = f.getName().substring(0, f.getName().lastIndexOf('.')) + "-enc.txt";
             try (FileOutputStream writer = new FileOutputStream(f.getParent() + "//" + enc);
                 FileInputStream reader = new FileInputStream(args[1])) {
-
                 byte[] bufferKey = Tea.generateKey();
+                int[] key = Transfer.byteToInt(bufferKey);
 
-                runCycle(f, writer, reader, bufferKey, args[2]);
+                int[] keyEnc = Tea.encryptInParts(key, hashKey);
+                writeFile(writer, Transfer.intToByte(keyEnc));
 
-                writeToFile(f.getParent() + KEY_FILE, bufferKey);
+                runCycle(f, writer, reader, key);
             } catch (IOException e) {
                 System.out.println(e.getMessage());
             }
@@ -70,15 +72,16 @@ public class Main {
         if (args[0].equals("-d")) {
             String dec = f.getName().substring(0, f.getName().lastIndexOf('-')) + "-dec.txt";
             try (FileOutputStream writer = new FileOutputStream(f.getParent() + "//" + dec);
-                 FileInputStream reader = new FileInputStream(args[1]);
-                 FileInputStream writerKey = new FileInputStream(f.getParent() + KEY_FILE)) {
-
+                 FileInputStream reader = new FileInputStream(args[1])) {
 
                 byte[] bufferKey = new byte[16];
+                reader.read(bufferKey, 0, bufferKey.length);
 
-                writerKey.read(bufferKey, 0, bufferKey.length);
+                int[] key = Transfer.byteToInt(bufferKey);
+                int[] keyDec = Tea.decryptInParts(key, hashKey);
 
-                runCycle(f, writer, reader, bufferKey, args[2]);
+
+                runCycle(f, writer, reader, keyDec);
 
             } catch (IOException e) {
                 System.out.println(e.getMessage());
@@ -87,19 +90,14 @@ public class Main {
     }
 
     private static void runCycle(File f, FileOutputStream writer, FileInputStream reader,
-                                 byte[] bufferKey, String password) throws IOException {
+                                 int[] key) throws IOException {
         int size = (int)f.length()/8;
         int vector[] = initVector();
-        int[] hashKey = Transfer.getMd5Digest(password);
-        int[] key = Transfer.byteToInt(bufferKey);
-
-        int[] keyEnc = Tea.encryptInParts(key, hashKey);
-        writeFile(writer, Transfer.intToByte(keyEnc));
-
         byte[] bufferValue = new byte[8];
 
 
         for (int i = 0; i <= size; i++) {
+            reader.read(bufferValue, 0, bufferValue.length);
             int[] value = Transfer.byteToInt(bufferValue);
             Tea.encrypt(vector, key);
             Tea.ofb(value, vector);
