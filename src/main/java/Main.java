@@ -3,11 +3,13 @@ import java.io.*;
 public class Main {
     private static void printHelpToConsole() {
         System.out.println("Вы должны ввести параметры в таком порядке:" + "\n"
-                + "java -jar tea.jar -e param1 для шифрования" + "\n"
-                + "или tea.jar -d param1 для дешифрования" + "\n"
+                + "java -jar ofb.jar -e param1 param2 для шифрования" + "\n"
+                + "или ofb.jar -d param1 param2 для дешифрования" + "\n"
                 + "где param1 - полный путь к текстовому файлу для кодирования/декодирования" + "\n"
-                + "пример: C:/ИБ/ЛР1/1.txt для кодирования" + "\n"
-                + "или C:/ИБ/ЛР1/1-enc.txt для декодирования");
+                + "пример: C:/IB/1.txt для кодирования" + "\n"
+                + "или C:/IB/1-enc.txt для декодирования" + "\n"
+                + "где param2 - пароль шифрования" + "\n"
+                + "пример: 123");
     }
 
     public static void main(String[] args) throws IOException {
