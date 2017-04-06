@@ -71,6 +71,8 @@ public class Main {
             if (i == size) {
                 int sizeBlock = FileManager.readFile(reader, bufferValue);
                 value = Transfer.byteToInt(bufferValue);
+                Tea.encrypt(vector, key);
+                Tea.ofb(value, vector);
                 FileManager.writeFile(writer, Transfer.intToByte(value), sizeBlock);
             }
             else FileManager.writeFile(writer, Transfer.intToByte(value));
