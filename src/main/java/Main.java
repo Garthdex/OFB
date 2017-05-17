@@ -17,6 +17,7 @@ public class Main {
         int size = (int)f.length()/8;
         String password = args[2];
         int[] hashKey = Transfer.getMd5Digest(password);
+
         if (args.length == 0 || args[0].equals("?")) {
             printHelpToConsole();
             return;
