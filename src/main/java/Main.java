@@ -1,6 +1,8 @@
 import java.io.*;
+import java.nio.file.Files;
 
 public class Main {
+    private static final String KEY_FILE = "//key.key";
     private static void printHelpToConsole() {
         System.out.println("Вы должны ввести параметры в таком порядке:" + "\n"
                 + "java -jar ofb.jar -e param1 param2 для шифрования" + "\n"
@@ -14,46 +16,108 @@ public class Main {
 
     public static void main(String[] args) throws IOException {
         File f = new File(args[1]);
+        String dot = f.getName().substring(f.getName().lastIndexOf("."), f.getName().length());
         int size = (int)f.length()/8;
-        String password = args[2];
-        int[] hashKey = Transfer.getMd5Digest(password);
 
         if (args.length == 0 || args[0].equals("?")) {
             printHelpToConsole();
             return;
         }
 
+        System.out.println("Would you use session password? y/n");
+        Console cons = System.console();
+        String answer = cons.readLine();
+        int[] hashKey = null;
+        if (answer.equals("y")) {
+            String password = String.valueOf(cons.readPassword("Enter Password: "));
+            hashKey = Transfer.getMd5Digest(password);
+        }
+
         if (args[0].equals("-e")) {
-            String enc = f.getName().substring(0, f.getName().lastIndexOf('.')) + "-enc.txt";
-            try (FileOutputStream writer = new FileOutputStream(f.getParent() + "//" + enc);
-                FileInputStream reader = new FileInputStream(args[1])) {
+
+            System.out.println("Would you archive?y/n");
+            String answer2 = cons.readLine();
+            String fileName = "";
+            File fArch = null;
+            if (answer2.equals("y")) {
+                byte[] value;
+                try {
+                    value = FileManager.readFile(f);
+                } catch (FileNotFoundException e){
+                    System.out.println("Файл не найден");
+                    return;
+                }
+                byte[] compressed = Archiver.compressed(value);
+                fileName = f.getName().substring(0, f.getName().lastIndexOf('.')) + "-ZIP" + dot;
+                fArch = new File(f.getParent() + fileName);
+                FileManager.writeFile(f.getParent() + fileName, compressed);
+            }
+
+            String enc = f.getName().substring(0, f.getName().lastIndexOf('.')) + "-enc" + dot;
+            FileInputStream reader;
+            if (answer2.equals("y")) reader = new FileInputStream(f.getParent() + fileName);
+            else reader = new FileInputStream(args[1]);
+            try (FileOutputStream writer = new FileOutputStream(f.getParent() + "//" + enc)) {
                 byte[] bufferKey = Tea.generateKey();
                 int[] key = Transfer.byteToInt(bufferKey);
 
-                int[] keyEnc = Tea.encryptInParts(key, hashKey);
-                FileManager.writeFile(writer, Transfer.intToByte(keyEnc));
+                if (hashKey != null) {
+                    int[] keyEnc = Tea.encryptInParts(key, hashKey);
+                    FileManager.writeFile(writer, Transfer.intToByte(keyEnc));
+                }
+                else {
+                    FileManager.writeToFile(f.getParent() + KEY_FILE, Transfer.intToByte(key));
+                }
 
                 runCycle(size, writer, reader, key);
             } catch (IOException e) {
                 System.out.println(e.getMessage());
+            } finally {
+                reader.close();
+            }
+            if (fArch != null) {
+                //Files.delete(fArch.toPath());
             }
         }
 
         if (args[0].equals("-d")) {
-            String dec = f.getName().substring(0, f.getName().lastIndexOf('-')) + "-dec.txt";
+
+            String dec = f.getName().substring(0, f.getName().lastIndexOf('-')) + "-dec" + dot;
             try (FileOutputStream writer = new FileOutputStream(f.getParent() + "//" + dec);
                  FileInputStream reader = new FileInputStream(args[1])) {
 
+                int[] keyDec = null;
                 byte[] bufferKey = new byte[16];
-                reader.read(bufferKey, 0, bufferKey.length);
+                if (hashKey != null) {
+                    reader.read(bufferKey, 0, bufferKey.length);
+                    int[] key = Transfer.byteToInt(bufferKey);
+                    keyDec = Tea.decryptInParts(key, hashKey);
+                }
+                else {
+                    FileInputStream fin2 = new FileInputStream(f.getParent() + KEY_FILE);
+                    fin2.read(bufferKey, 0, bufferKey.length);
+                }
 
-                int[] key = Transfer.byteToInt(bufferKey);
-                int[] keyDec = Tea.decryptInParts(key, hashKey);
-
-                runCycle(size - 2, writer, reader, keyDec);
+                if (hashKey != null) runCycle(size - 2, writer, reader, keyDec);
+                else runCycle(size, writer, reader, Transfer.byteToInt(bufferKey));
 
             } catch (IOException e) {
                 System.out.println(e.getMessage());
+            }
+
+            File fUnArch = new File(f.getParent() + dec);
+            System.out.println("Would you unarchive?y/n");
+            String answer2 = cons.readLine();
+            if (answer2.equals("y")) {
+                byte[] value;
+                try {
+                    value = FileManager.readFile(fUnArch);
+                } catch (FileNotFoundException e){
+                    System.out.println("Файл не найден");
+                    return;
+                }
+                byte[] decompressed = Archiver.deCompressed(value);
+                FileManager.writeFile(f.getParent() + dec, decompressed);
             }
         }
     }
